@@ -79,6 +79,11 @@ export class LessonController {
     return this.lessonService.findAll(courseId);
   }
 
+   @Patch('reorder')
+   reorder(@Body() body: { id: string; order: number }[]) {
+  return this.lessonService.reorder(body);
+}
+
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.lessonService.findOne(id);
@@ -93,4 +98,6 @@ export class LessonController {
   remove(@Param('id') id: string) {
     return this.lessonService.remove(id);
   }
+
+ 
 }
