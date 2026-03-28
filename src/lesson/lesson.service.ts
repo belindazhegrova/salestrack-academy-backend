@@ -21,7 +21,7 @@ export class LessonService {
       orderBy: { order: 'desc' },
     });
 
-    const nextOrder = lastLesson ? lastLesson.order + 1 : 0;
+    const nextOrder = lastLesson ? lastLesson.order + 1 : 1;
 
     return this.prisma.lesson.create({
       data: {
@@ -70,4 +70,15 @@ export class LessonService {
       where: { id },
     });
   }
+
+  async reorder(data: { id: string; order: number }[]) {
+  const updates = data.map((item) =>
+    this.prisma.lesson.update({
+      where: { id: item.id },
+      data: { order: item.order },
+    }),
+  );
+
+  return this.prisma.$transaction(updates);
+}
 }
