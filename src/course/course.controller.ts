@@ -17,6 +17,7 @@ import { diskStorage } from 'multer';
 import { extname } from 'path';
 import { CourseService } from './course.service';
 import { CreateCourseDto } from './dto/create-course.dto';
+import { AssignCourseDto } from './dto/assign-course.dto';
 import { UpdateCourseDto } from './dto/update-course.dto';
 import { JwtAuthGuard } from 'src/auth/jwt/auth.guard';
 
@@ -67,7 +68,7 @@ export class CourseController {
 
     const thumbnail = file ? `/uploads/courses/${file.filename}` : undefined;
 
-    return this.courseService.create(dto, req.user.id, thumbnail);
+   return this.courseService.create(dto, req.user.userId, thumbnail);
   }
 
   @Get()
@@ -97,4 +98,13 @@ export class CourseController {
 
     return this.courseService.remove(id);
   }
+
+  @Post('assign')
+assignCourse(@Body() dto: AssignCourseDto, @Req() req: any) {
+  if (req.user.role !== 'ADMIN') {
+    throw new UnauthorizedException('Only admin can assign courses');
+  }
+
+  return this.courseService.assignCourse(dto);
+}
 }
