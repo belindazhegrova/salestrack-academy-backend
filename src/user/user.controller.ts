@@ -1,32 +1,37 @@
 import {
-  Controller,
-  Post,
   Body,
-  UseGuards,
+  Controller,
+  Get,
+  Post,
   Req,
+  UseGuards,
   ForbiddenException,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt/auth.guard';
 import { UserService } from './user.service';
-import * as bcrypt from 'bcrypt';
 
 @Controller('users')
+@UseGuards(JwtAuthGuard)
 export class UserController {
   constructor(private userService: UserService) {}
 
-  @UseGuards(JwtAuthGuard)
-  @Post()
-  async createUser(@Req() req: any, @Body() body: any) {
+
+  @Post('agents')
+  async createAgent(@Req() req: any, @Body() body: { email: string; password: string }) {
     if (req.user.role !== 'ADMIN') {
-      throw new ForbiddenException('Only admin can create users');
+      throw new ForbiddenException('Only admin can create agents');
     }
 
-    const hashed = await bcrypt.hash(body.password, 10);
+    return this.userService.createAgent(body.email, body.password);
+  }
 
-    return this.userService.create(
-      body.email,
-      hashed,
-      body.role || 'AGENT'
-    );
+
+  @Get('agents')
+  async getAgents(@Req() req: any) {
+    if (req.user.role !== 'ADMIN') {
+      throw new ForbiddenException('Only admin can view agents');
+    }
+
+    return this.userService.findAgents();
   }
 }

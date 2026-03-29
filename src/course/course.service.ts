@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException ,BadRequestException} from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateCourseDto } from './dto/create-course.dto';
 import { UpdateCourseDto } from './dto/update-course.dto';
@@ -52,4 +52,27 @@ export class CourseService {
       where: { id },
     });
   }
+
+  async assignCourse(dto: { userId: string; courseId: string }) {
+
+  const existing = await this.prisma.enrollment.findUnique({
+    where: {
+      userId_courseId: {
+        userId: dto.userId,
+        courseId: dto.courseId,
+      },
+    },
+  });
+
+  if (existing) {
+    throw new BadRequestException('User already assigned to this course');
+  }
+
+  return this.prisma.enrollment.create({
+    data: {
+      userId: dto.userId,
+      courseId: dto.courseId,
+    },
+  });
+}
 }

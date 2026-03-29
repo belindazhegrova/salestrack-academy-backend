@@ -18,6 +18,7 @@ model User {
   role      Role     @default(ADMIN)
   createdAt DateTime @default(now())
   courses   Course[]
+  enrollments Enrollment[]
 }
 
 model Course {
@@ -31,6 +32,7 @@ model Course {
   userId  String
   user    User     @relation(fields: [userId], references: [id])
   lessons Lesson[]
+   enrollments  Enrollment[]
 }
 
 enum LessonType {
@@ -52,6 +54,41 @@ model Lesson {
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
 
-  courseId String
-  course   Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  courseId  String
+  course    Course     @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  questions Question[]
+}
+
+model Question {
+  id        String   @id @default(cuid())
+  title     String
+  lessonId  String
+  lesson    Lesson   @relation(fields: [lessonId], references: [id])
+  answers   Answer[]
+  createdAt DateTime @default(now())
+}
+
+model Answer {
+  id         String   @id @default(cuid())
+  text       String
+  isCorrect  Boolean  @default(false)
+  questionId String
+  question   Question @relation(fields: [questionId], references: [id])
+}
+
+model Enrollment {
+  id        String   @id @default(cuid())
+  userId    String
+  courseId  String
+
+  progress  Int      @default(0) // %
+  completed Boolean  @default(false)
+  quizScore Int?
+
+  user   User   @relation(fields: [userId], references: [id])
+  course Course @relation(fields: [courseId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, courseId])
 }
