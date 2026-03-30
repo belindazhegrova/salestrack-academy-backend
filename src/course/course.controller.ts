@@ -68,17 +68,17 @@ export class CourseController {
 
     const thumbnail = file ? `/uploads/courses/${file.filename}` : undefined;
 
-   return this.courseService.create(dto, req.user.userId, thumbnail);
+    return this.courseService.create(dto, req.user.userId, thumbnail);
   }
 
   @Get()
-  findAll() {
-    return this.courseService.findAll();
+  findAll(@Req() req: any) {
+    return this.courseService.findAll(req.user.userId, req.user.role);
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.courseService.findOne(id);
+  findOne(@Param('id') id: string, @Req() req: any) {
+    return this.courseService.findOne(id, req.user.userId, req.user.role);
   }
 
   @Patch(':id')
@@ -87,7 +87,7 @@ export class CourseController {
       throw new UnauthorizedException('Only admin can update courses');
     }
 
-    return this.courseService.update(id, dto);
+    return this.courseService.update(id, dto, req.user.userId);
   }
 
   @Delete(':id')
@@ -96,15 +96,15 @@ export class CourseController {
       throw new UnauthorizedException('Only admin can delete courses');
     }
 
-    return this.courseService.remove(id);
+    return this.courseService.remove(id, req.user.userId);
   }
 
   @Post('assign')
-assignCourse(@Body() dto: AssignCourseDto, @Req() req: any) {
-  if (req.user.role !== 'ADMIN') {
-    throw new UnauthorizedException('Only admin can assign courses');
-  }
+  assignCourse(@Body() dto: AssignCourseDto, @Req() req: any) {
+    if (req.user.role !== 'ADMIN') {
+      throw new UnauthorizedException('Only admin can assign courses');
+    }
 
-  return this.courseService.assignCourse(dto);
-}
+    return this.courseService.assignCourse(dto, req.user.userId);
+  }
 }

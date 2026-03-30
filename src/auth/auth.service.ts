@@ -24,7 +24,7 @@ export class AuthService {
     const user = await this.userService.create(
       email,
       password,
-      'ADMIN'
+      'ADMIN',
     );
 
     return {

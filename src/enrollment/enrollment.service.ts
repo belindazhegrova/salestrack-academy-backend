@@ -9,13 +9,12 @@ import { PrismaService } from 'src/prisma/prisma.service';
 export class EnrollmentService {
   constructor(private prisma: PrismaService) {}
 
-  async findOne(userId: string, courseId: string) {
-    const enrollment = await this.prisma.enrollment.findUnique({
+  async findOne(userId: string, courseId: string, adminId?: string, role?: string) {
+    const enrollment = await this.prisma.enrollment.findFirst({
       where: {
-        userId_courseId: {
-          userId,
-          courseId,
-        },
+        userId,
+        courseId,
+        ...(role === 'ADMIN' ? { course: { userId: adminId } } : {}),
       },
     });
 
@@ -26,8 +25,14 @@ export class EnrollmentService {
     return enrollment;
   }
 
-  async updateProgress(userId: string, courseId: string, progress: number) {
-    const enrollment = await this.findOne(userId, courseId);
+  async updateProgress(
+    userId: string,
+    courseId: string,
+    progress: number,
+    adminId: string,
+    role: string,
+  ) {
+    const enrollment = await this.findOne(userId, courseId, adminId, role);
 
     const quiz = await this.prisma.quiz.findUnique({
       where: { courseId },
@@ -50,8 +55,14 @@ export class EnrollmentService {
     });
   }
 
-  async updateQuizScore(userId: string, courseId: string, quizScore: number) {
-    const enrollment = await this.findOne(userId, courseId);
+  async updateQuizScore(
+    userId: string,
+    courseId: string,
+    quizScore: number,
+    adminId: string,
+    role: string,
+  ) {
+    const enrollment = await this.findOne(userId, courseId, adminId, role);
 
     const quiz = await this.prisma.quiz.findUnique({
       where: { courseId },
@@ -113,7 +124,7 @@ export class EnrollmentService {
     }));
   }
 
-  async getAgentProgress(userId: string) {
+  async getAgentProgress(userId: string, adminId: string, role: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
     });
@@ -124,8 +135,15 @@ export class EnrollmentService {
       throw new BadRequestException('Not an agent');
     }
 
+    if (role === 'ADMIN' && user.adminId !== adminId) {
+      throw new NotFoundException('Agent not found');
+    }
+
     return this.prisma.enrollment.findMany({
-      where: { userId },
+      where: {
+        userId,
+        ...(role === 'ADMIN' ? { course: { userId: adminId } } : {}),
+      },
       include: {
         course: {
           include: {
@@ -183,20 +201,43 @@ export class EnrollmentService {
     });
   }
 
-  async getAdminStats() {
+  async getAdminStats(adminId: string) {
     const totalAgents = await this.prisma.user.count({
-      where: { role: 'AGENT' },
+      where: {
+        role: 'AGENT',
+        adminId,
+      },
     });
 
-    const totalCourses = await this.prisma.course.count();
+    const totalCourses = await this.prisma.course.count({
+      where: {
+        userId: adminId,
+      },
+    });
 
-    const totalAssignments = await this.prisma.enrollment.count();
+    const totalAssignments = await this.prisma.enrollment.count({
+      where: {
+        course: {
+          userId: adminId,
+        },
+      },
+    });
 
     const completed = await this.prisma.enrollment.count({
-      where: { completed: true },
+      where: {
+        completed: true,
+        course: {
+          userId: adminId,
+        },
+      },
     });
 
     const avgScore = await this.prisma.enrollment.aggregate({
+      where: {
+        course: {
+          userId: adminId,
+        },
+      },
       _avg: {
         quizScore: true,
       },

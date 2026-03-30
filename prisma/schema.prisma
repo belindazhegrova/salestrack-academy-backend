@@ -17,6 +17,11 @@ model User {
   password       String
   role           Role             @default(ADMIN)
   createdAt      DateTime         @default(now())
+
+  adminId        String?
+  admin          User?            @relation("AdminAgents", fields: [adminId], references: [id])
+  createdAgents  User[]           @relation("AdminAgents")
+
   courses        Course[]
   enrollments    Enrollment[]
   lessonProgress LessonProgress[]

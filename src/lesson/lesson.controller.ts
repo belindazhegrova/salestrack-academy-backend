@@ -1,103 +1,84 @@
-import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  Param,
-  Patch,
-  Post,
-  Query,
-  UseGuards,
-  UploadedFiles,
-  UseInterceptors,
-} from '@nestjs/common';
-import { LessonService } from './lesson.service';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateLessonDto } from './dto/create-lesson.dto';
 import { UpdateLessonDto } from './dto/update-lesson.dto';
-import { JwtAuthGuard } from 'src/auth/jwt/auth.guard';
 
-import { FileFieldsInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
-import { extname } from 'path';
+@Injectable()
+export class LessonService {
+  constructor(private prisma: PrismaService) {}
 
-@UseGuards(JwtAuthGuard)
-@Controller('lessons')
-export class LessonController {
-  constructor(private readonly lessonService: LessonService) {}
+  async create(dto: CreateLessonDto) {
+    const course = await this.prisma.course.findUnique({
+      where: { id: dto.courseId },
+    });
 
-  @Post()
-  @UseInterceptors(
-    FileFieldsInterceptor(
-      [
-        { name: 'video', maxCount: 1 },
-        { name: 'pdf', maxCount: 1 },
-        { name: 'audio', maxCount: 1 },
-      ],
-      {
-        storage: diskStorage({
-          destination: './uploads/lessons',
-          filename: (req, file, callback) => {
-            const uniqueName = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
-            const fileExtName = extname(file.originalname);
-            callback(null, `${uniqueName}${fileExtName}`);
-          },
-        }),
-      }
-    )
-  )
-  create(
-    @UploadedFiles()
-    files: {
-      video?: Express.Multer.File[];
-      pdf?: Express.Multer.File[];
-      audio?: Express.Multer.File[];
-    },
-    @Body() dto: CreateLessonDto
-  ) {
-    const videoUrl = files.video?.[0]
-      ? `/uploads/lessons/${files.video[0].filename}`
-      : undefined;
+    if (!course) {
+      throw new NotFoundException('Course not found');
+    }
 
-    const pdfUrl = files.pdf?.[0]
-      ? `/uploads/lessons/${files.pdf[0].filename}`
-      : undefined;
+    const lastLesson = await this.prisma.lesson.findFirst({
+      where: { courseId: dto.courseId },
+      orderBy: { order: 'desc' },
+    });
 
-    const audioUrl = files.audio?.[0]
-      ? `/uploads/lessons/${files.audio[0].filename}`
-      : undefined;
+    const nextOrder = lastLesson ? lastLesson.order + 1 : 1;
 
-    return this.lessonService.create({
-      ...dto,
-      videoUrl,
-      pdfUrl,
-      audioUrl,
+    return this.prisma.lesson.create({
+      data: {
+        title: dto.title,
+        content: dto.content,
+        type: dto.type,
+        videoUrl: dto.videoUrl,
+        pdfUrl: dto.pdfUrl,
+        audioUrl: dto.audioUrl,
+        order: dto.order ?? nextOrder,
+        courseId: dto.courseId,
+      },
     });
   }
 
-  @Get()
-  findAll(@Query('courseId') courseId?: string) {
-    return this.lessonService.findAll(courseId);
+  async findAll(courseId?: string) {
+    return this.prisma.lesson.findMany({
+      where: courseId ? { courseId } : {},
+      orderBy: { order: 'asc' },
+    });
   }
 
-   @Patch('reorder')
-   reorder(@Body() body: { id: string; order: number }[]) {
-  return this.lessonService.reorder(body);
+  async findOne(id: string) {
+    const lesson = await this.prisma.lesson.findUnique({
+      where: { id },
+    });
+
+    if (!lesson) throw new NotFoundException('Lesson not found');
+
+    return lesson;
+  }
+
+  async update(id: string, dto: UpdateLessonDto) {
+    await this.findOne(id);
+
+    return this.prisma.lesson.update({
+      where: { id },
+      data: dto,
+    });
+  }
+
+  async remove(id: string) {
+    await this.findOne(id);
+
+    return this.prisma.lesson.delete({
+      where: { id },
+    });
+  }
+
+  async reorder(data: { id: string; order: number }[]) {
+  const updates = data.map((item) =>
+    this.prisma.lesson.update({
+      where: { id: item.id },
+      data: { order: item.order },
+    }),
+  );
+
+  return this.prisma.$transaction(updates);
 }
-
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.lessonService.findOne(id);
-  }
-
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() dto: UpdateLessonDto) {
-    return this.lessonService.update(id, dto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.lessonService.remove(id);
-  }
-
- 
 }

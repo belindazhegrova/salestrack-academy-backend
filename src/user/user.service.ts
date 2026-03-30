@@ -32,13 +32,13 @@ export class UserService {
     email: string,
     password: string,
     role: 'ADMIN' | 'AGENT',
+    adminId?: string,
   ) {
     const existingUser = await this.findByEmail(email);
 
     if (existingUser) {
       throw new BadRequestException('Email already exists');
     }
-
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -47,23 +47,28 @@ export class UserService {
         email,
         password: hashedPassword,
         role,
+        adminId: role === 'AGENT' ? adminId : null,
       },
       select: {
         id: true,
         email: true,
         role: true,
         createdAt: true,
+        adminId: true,
       },
     });
   }
 
-  async createAgent(email: string, password: string) {
-    return this.create(email, password, 'AGENT');
+  async createAgent(email: string, password: string, adminId: string) {
+    return this.create(email, password, 'AGENT', adminId);
   }
 
-  async findAgents() {
+  async findAgents(adminId: string) {
     return this.prisma.user.findMany({
-      where: { role: 'AGENT' },
+      where: {
+        role: 'AGENT',
+        adminId,
+      },
       select: {
         id: true,
         email: true,

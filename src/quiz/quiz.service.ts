@@ -11,9 +11,12 @@ import { SubmitQuizDto } from './dto/submit-quiz.dto';
 export class QuizService {
   constructor(private prisma: PrismaService) {}
 
-  async create(dto: CreateQuestionDto) {
-    const course = await this.prisma.course.findUnique({
-      where: { id: dto.courseId },
+  async create(dto: CreateQuestionDto, adminId: string, role: string) {
+    const course = await this.prisma.course.findFirst({
+      where: {
+        id: dto.courseId,
+        ...(role === 'ADMIN' ? { userId: adminId } : {}),
+      },
     });
 
     if (!course) {
@@ -61,7 +64,18 @@ export class QuizService {
     });
   }
 
-  async findByCourse(courseId: string) {
+  async findByCourse(courseId: string, adminId: string, role: string) {
+    const course = await this.prisma.course.findFirst({
+      where: {
+        id: courseId,
+        ...(role === 'ADMIN' ? { userId: adminId } : {}),
+      },
+    });
+
+    if (!course) {
+      throw new NotFoundException('Course not found');
+    }
+
     const quiz = await this.prisma.quiz.findUnique({
       where: { courseId },
       include: {
@@ -83,9 +97,20 @@ export class QuizService {
     return quiz.questions;
   }
 
-  async remove(id: string) {
-    const question = await this.prisma.question.findUnique({
-      where: { id },
+  async remove(id: string, adminId: string, role: string) {
+    const question = await this.prisma.question.findFirst({
+      where: {
+        id,
+        ...(role === 'ADMIN'
+          ? {
+              quiz: {
+                course: {
+                  userId: adminId,
+                },
+              },
+            }
+          : {}),
+      },
     });
 
     if (!question) {

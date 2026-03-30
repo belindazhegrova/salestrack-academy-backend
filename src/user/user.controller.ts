@@ -15,16 +15,21 @@ import { UserService } from './user.service';
 export class UserController {
   constructor(private userService: UserService) {}
 
-
   @Post('agents')
-  async createAgent(@Req() req: any, @Body() body: { email: string; password: string }) {
+  async createAgent(
+    @Req() req: any,
+    @Body() body: { email: string; password: string },
+  ) {
     if (req.user.role !== 'ADMIN') {
       throw new ForbiddenException('Only admin can create agents');
     }
 
-    return this.userService.createAgent(body.email, body.password);
+    return this.userService.createAgent(
+      body.email,
+      body.password,
+      req.user.userId,
+    );
   }
-
 
   @Get('agents')
   async getAgents(@Req() req: any) {
@@ -32,6 +37,6 @@ export class UserController {
       throw new ForbiddenException('Only admin can view agents');
     }
 
-    return this.userService.findAgents();
+    return this.userService.findAgents(req.user.userId);
   }
 }
