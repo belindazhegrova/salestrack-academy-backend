@@ -28,40 +28,44 @@ export class UserService {
     return user;
   }
 
-  async create(
-    email: string,
-    password: string,
-    role: 'ADMIN' | 'AGENT',
-    adminId?: string,
-  ) {
-    const existingUser = await this.findByEmail(email);
+async create(
+  email: string,
+  password: string,
+  role: 'ADMIN' | 'AGENT',
+  adminId: string | undefined ,
+  name: string, 
+) {
+  const existingUser = await this.findByEmail(email);
 
-    if (existingUser) {
-      throw new BadRequestException('Email already exists');
-    }
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    return this.prisma.user.create({
-      data: {
-        email,
-        password: hashedPassword,
-        role,
-        adminId: role === 'AGENT' ? adminId : null,
-      },
-      select: {
-        id: true,
-        email: true,
-        role: true,
-        createdAt: true,
-        adminId: true,
-      },
-    });
+  if (existingUser) {
+    throw new BadRequestException('Email already exists');
   }
 
-  async createAgent(email: string, password: string, adminId: string) {
-    return this.create(email, password, 'AGENT', adminId);
-  }
+  const hashedPassword = await bcrypt.hash(password, 10);
+
+  return this.prisma.user.create({
+    data: {
+      email,
+      password: hashedPassword,
+      role,
+      adminId: role === 'AGENT' ? adminId : null,
+      name
+    },
+    select: {
+      id: true,
+      email: true,
+      role: true,
+      name: true,
+      createdAt: true,
+      adminId: true,
+    },
+  });
+}
+
+
+async createAgent(email: string, password: string, adminId: string, name: string) {
+  return this.create(email, password, 'AGENT', adminId, name);
+}
 
   async findAgents(adminId: string) {
     return this.prisma.user.findMany({
