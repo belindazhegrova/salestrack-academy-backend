@@ -8,16 +8,11 @@ class AnswerDto {
   @IsBoolean()
   isCorrect: boolean;
 }
-
 export class CreateQuestionDto {
-  @IsString()
+  courseId: string;
   title: string;
-
-  @IsString()
-  lessonId: string;
-
-  @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => AnswerDto)
-  answers: AnswerDto[];
+  answers: {
+    text: string;
+    isCorrect: boolean;
+  }[];
 }

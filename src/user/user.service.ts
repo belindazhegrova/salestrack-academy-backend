@@ -16,7 +16,6 @@ export class UserService {
     });
   }
 
-
   async findById(id: string) {
     const user = await this.prisma.user.findUnique({
       where: { id },
@@ -29,7 +28,6 @@ export class UserService {
     return user;
   }
 
-
   async create(
     email: string,
     password: string,
@@ -40,6 +38,7 @@ export class UserService {
     if (existingUser) {
       throw new BadRequestException('Email already exists');
     }
+
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -58,17 +57,13 @@ export class UserService {
     });
   }
 
- 
   async createAgent(email: string, password: string) {
     return this.create(email, password, 'AGENT');
   }
 
- 
   async findAgents() {
     return this.prisma.user.findMany({
-      where: {
-        role: 'AGENT',
-      },
+      where: { role: 'AGENT' },
       select: {
         id: true,
         email: true,

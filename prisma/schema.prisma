@@ -12,13 +12,14 @@ enum Role {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  password  String
-  role      Role     @default(ADMIN)
-  createdAt DateTime @default(now())
-  courses   Course[]
-  enrollments Enrollment[]
+  id             String           @id @default(cuid())
+  email          String           @unique
+  password       String
+  role           Role             @default(ADMIN)
+  createdAt      DateTime         @default(now())
+  courses        Course[]
+  enrollments    Enrollment[]
+  lessonProgress LessonProgress[]
 }
 
 model Course {
@@ -29,10 +30,30 @@ model Course {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  userId  String
-  user    User     @relation(fields: [userId], references: [id])
-  lessons Lesson[]
-   enrollments  Enrollment[]
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  lessons     Lesson[]
+  enrollments Enrollment[]
+  quiz        Quiz?
+}
+
+model Quiz {
+  id           String @id @default(cuid())
+  courseId     String @unique
+  passingScore Int    @default(80)
+
+  course    Course     @relation(fields: [courseId], references: [id])
+  questions Question[]
+}
+
+model Question {
+  id        String   @id @default(cuid())
+  title     String
+  quizId    String
+  quiz      Quiz     @relation(fields: [quizId], references: [id])
+  answers   Answer[]
+  createdAt DateTime @default(now())
 }
 
 enum LessonType {
@@ -54,18 +75,10 @@ model Lesson {
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
 
-  courseId  String
-  course    Course     @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  questions Question[]
-}
+  courseId String
+  course   Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
 
-model Question {
-  id        String   @id @default(cuid())
-  title     String
-  lessonId  String
-  lesson    Lesson   @relation(fields: [lessonId], references: [id])
-  answers   Answer[]
-  createdAt DateTime @default(now())
+  lessonProgress LessonProgress[]
 }
 
 model Answer {
@@ -77,12 +90,12 @@ model Answer {
 }
 
 model Enrollment {
-  id        String   @id @default(cuid())
-  userId    String
-  courseId  String
+  id       String @id @default(cuid())
+  userId   String
+  courseId String
 
-  progress  Int      @default(0) // %
-  completed Boolean  @default(false)
+  progress  Int     @default(0) // %
+  completed Boolean @default(false)
   quizScore Int?
 
   user   User   @relation(fields: [userId], references: [id])
@@ -91,4 +104,17 @@ model Enrollment {
   createdAt DateTime @default(now())
 
   @@unique([userId, courseId])
+}
+
+model LessonProgress {
+  id          String    @id @default(cuid())
+  userId      String
+  lessonId    String
+  completed   Boolean   @default(false)
+  completedAt DateTime?
+
+  user   User   @relation(fields: [userId], references: [id])
+  lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, lessonId])
 }

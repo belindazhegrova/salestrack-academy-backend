@@ -4,11 +4,13 @@ import {
   Get,
   Post,
   Query,
+  Req,
   Delete,
   Param,
   UseGuards,
 } from '@nestjs/common';
 import { QuizService } from './quiz.service';
+import { SubmitQuizDto } from './dto/submit-quiz.dto';
 import { CreateQuestionDto } from './dto/create-question.dto';
 import { JwtAuthGuard } from 'src/auth/jwt/auth.guard';
 
@@ -23,12 +25,18 @@ export class QuizController {
   }
 
   @Get()
-  find(@Query('lessonId') lessonId: string) {
-    return this.quizService.findByLesson(lessonId);
+  find(@Query('courseId') courseId: string) {
+    return this.quizService.findByCourse(courseId);
   }
+  
 
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.quizService.remove(id);
+  }
+
+  @Post('submit')
+  submit(@Req() req: any, @Body() dto: SubmitQuizDto) {
+    return this.quizService.submitQuiz(req.user.userId, dto);
   }
 }

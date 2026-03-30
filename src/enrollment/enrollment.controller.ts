@@ -48,6 +48,11 @@ export class EnrollmentController {
     return this.enrollmentService.getAgentCourses(req.user.userId);
   }
 
+  @Get('my-courses/:courseId')
+getMyCourseDetails(@Req() req: any, @Param('courseId') courseId: string) {
+  console.log('USER111111:', req.user); 
+  return this.enrollmentService.getAgentCourseDetails(req.user.userId, courseId);
+}
 
 
   @Get('stats')
@@ -59,6 +64,7 @@ export class EnrollmentController {
   getAgentProgress(@Param('userId') userId: string) {
     return this.enrollmentService.getAgentProgress(userId);
   }
+
 
 
 }

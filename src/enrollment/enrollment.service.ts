@@ -9,7 +9,6 @@ import { PrismaService } from 'src/prisma/prisma.service';
 export class EnrollmentService {
   constructor(private prisma: PrismaService) {}
 
-
   async findOne(userId: string, courseId: string) {
     const enrollment = await this.prisma.enrollment.findUnique({
       where: {
@@ -27,9 +26,15 @@ export class EnrollmentService {
     return enrollment;
   }
 
- 
   async updateProgress(userId: string, courseId: string, progress: number) {
-    await this.findOne(userId, courseId);
+    const enrollment = await this.findOne(userId, courseId);
+
+    const quiz = await this.prisma.quiz.findUnique({
+      where: { courseId },
+    });
+
+    const passingScore = quiz?.passingScore ?? 80;
+    const passedQuiz = (enrollment.quizScore ?? 0) >= passingScore;
 
     return this.prisma.enrollment.update({
       where: {
@@ -40,14 +45,19 @@ export class EnrollmentService {
       },
       data: {
         progress,
-        completed: progress >= 100,
+        completed: progress >= 100 && passedQuiz,
       },
     });
   }
 
-
   async updateQuizScore(userId: string, courseId: string, quizScore: number) {
-    await this.findOne(userId, courseId);
+    const enrollment = await this.findOne(userId, courseId);
+
+    const quiz = await this.prisma.quiz.findUnique({
+      where: { courseId },
+    });
+
+    const passingScore = quiz?.passingScore ?? 80;
 
     return this.prisma.enrollment.update({
       where: {
@@ -58,13 +68,13 @@ export class EnrollmentService {
       },
       data: {
         quizScore,
+        completed: enrollment.progress >= 100 && quizScore >= passingScore,
       },
     });
   }
 
-
   async getAgentCourses(userId: string) {
-    return this.prisma.enrollment.findMany({
+    const enrollments = await this.prisma.enrollment.findMany({
       where: { userId },
       include: {
         course: {
@@ -72,12 +82,97 @@ export class EnrollmentService {
             lessons: {
               orderBy: { order: 'asc' },
             },
+            quiz: {
+              include: {
+                questions: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+
+    return enrollments.map((enrollment) => ({
+      id: enrollment.id,
+      progress: enrollment.progress,
+      completed: enrollment.completed,
+      quizScore: enrollment.quizScore,
+      createdAt: enrollment.createdAt,
+      course: {
+        id: enrollment.course.id,
+        title: enrollment.course.title,
+        description: enrollment.course.description,
+        thumbnail: enrollment.course.thumbnail,
+        totalLessons: enrollment.course.lessons.length,
+        totalQuestions: enrollment.course.quiz?.questions.length ?? 0,
+        lessons: enrollment.course.lessons,
+      },
+    }));
+  }
+
+  async getAgentProgress(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) throw new NotFoundException('User not found');
+
+    if (user.role !== 'AGENT') {
+      throw new BadRequestException('Not an agent');
+    }
+
+    return this.prisma.enrollment.findMany({
+      where: { userId },
+      include: {
+        course: {
+          include: {
+            quiz: true,
           },
         },
       },
     });
   }
 
+  async getAgentCourseDetails(userId: string, courseId: string) {
+    const enrollment = await this.prisma.enrollment.findUnique({
+      where: {
+        userId_courseId: {
+          userId,
+          courseId,
+        },
+      },
+      include: {
+        course: {
+          include: {
+            lessons: {
+              orderBy: { order: 'asc' },
+            },
+            quiz: {
+              include: {
+                questions: {
+                  include: {
+                    answers: true,
+                  },
+                  orderBy: {
+                    createdAt: 'asc',
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!enrollment) {
+      throw new NotFoundException('Assigned course not found');
+    }
+
+    return enrollment;
+  }
 
   async getAllEnrollments() {
     return this.prisma.enrollment.findMany({
@@ -87,7 +182,6 @@ export class EnrollmentService {
       },
     });
   }
-
 
   async getAdminStats() {
     const totalAgents = await this.prisma.user.count({
@@ -116,26 +210,4 @@ export class EnrollmentService {
       averageQuizScore: avgScore._avg.quizScore || 0,
     };
   }
-
-
-  async getAgentProgress(userId: string) {
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-    });
-
-    if (!user) throw new NotFoundException('User not found');
-
-    if (user.role !== 'AGENT') {
-      throw new BadRequestException('Not an agent');
-    }
-
-    return this.prisma.enrollment.findMany({
-      where: { userId },
-      include: {
-        course: true,
-      },
-    });
-  }
-
-
 }
