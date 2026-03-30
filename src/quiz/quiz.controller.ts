@@ -20,19 +20,18 @@ export class QuizController {
   constructor(private readonly quizService: QuizService) {}
 
   @Post()
-  create(@Body() dto: CreateQuestionDto) {
-    return this.quizService.create(dto);
+  create(@Body() dto: CreateQuestionDto, @Req() req: any) {
+    return this.quizService.create(dto, req.user.userId, req.user.role);
   }
 
   @Get()
-  find(@Query('courseId') courseId: string) {
-    return this.quizService.findByCourse(courseId);
+  find(@Query('courseId') courseId: string, @Req() req: any) {
+    return this.quizService.findByCourse(courseId, req.user.userId, req.user.role);
   }
-  
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.quizService.remove(id);
+  remove(@Param('id') id: string, @Req() req: any) {
+    return this.quizService.remove(id, req.user.userId, req.user.role);
   }
 
   @Post('submit')

@@ -7,14 +7,44 @@ import { UpdateLessonDto } from './dto/update-lesson.dto';
 export class LessonService {
   constructor(private prisma: PrismaService) {}
 
-  async create(dto: CreateLessonDto) {
-    const course = await this.prisma.course.findUnique({
-      where: { id: dto.courseId },
+  async ensureCourseOwner(courseId: string, adminId: string, role: string) {
+    const course = await this.prisma.course.findFirst({
+      where: {
+        id: courseId,
+        ...(role === 'ADMIN' ? { userId: adminId } : {}),
+      },
     });
 
     if (!course) {
       throw new NotFoundException('Course not found');
     }
+
+    return course;
+  }
+
+  async ensureLessonOwner(id: string, adminId: string, role: string) {
+    const lesson = await this.prisma.lesson.findFirst({
+      where: {
+        id,
+        ...(role === 'ADMIN'
+          ? {
+              course: {
+                userId: adminId,
+              },
+            }
+          : {}),
+      },
+    });
+
+    if (!lesson) {
+      throw new NotFoundException('Lesson not found');
+    }
+
+    return lesson;
+  }
+
+  async create(dto: CreateLessonDto, adminId: string, role: string) {
+    await this.ensureCourseOwner(dto.courseId, adminId, role);
 
     const lastLesson = await this.prisma.lesson.findFirst({
       where: { courseId: dto.courseId },
@@ -37,25 +67,21 @@ export class LessonService {
     });
   }
 
-  async findAll(courseId?: string) {
+  async findAll(courseId: string, adminId: string, role: string) {
+    await this.ensureCourseOwner(courseId, adminId, role);
+
     return this.prisma.lesson.findMany({
-      where: courseId ? { courseId } : {},
+      where: { courseId },
       orderBy: { order: 'asc' },
     });
   }
 
-  async findOne(id: string) {
-    const lesson = await this.prisma.lesson.findUnique({
-      where: { id },
-    });
-
-    if (!lesson) throw new NotFoundException('Lesson not found');
-
-    return lesson;
+  async findOne(id: string, adminId: string, role: string) {
+    return this.ensureLessonOwner(id, adminId, role);
   }
 
-  async update(id: string, dto: UpdateLessonDto) {
-    await this.findOne(id);
+  async update(id: string, dto: UpdateLessonDto, adminId: string, role: string) {
+    await this.ensureLessonOwner(id, adminId, role);
 
     return this.prisma.lesson.update({
       where: { id },
@@ -63,22 +89,31 @@ export class LessonService {
     });
   }
 
-  async remove(id: string) {
-    await this.findOne(id);
+  async remove(id: string, adminId: string, role: string) {
+    await this.ensureLessonOwner(id, adminId, role);
 
     return this.prisma.lesson.delete({
       where: { id },
     });
   }
 
-  async reorder(data: { id: string; order: number }[]) {
-  const updates = data.map((item) =>
-    this.prisma.lesson.update({
-      where: { id: item.id },
-      data: { order: item.order },
-    }),
-  );
+  async reorder(
+    data: { id: string; order: number }[],
+    adminId: string,
+    role: string
+  ) {
 
-  return this.prisma.$transaction(updates);
-}
+    for (const item of data) {
+      await this.ensureLessonOwner(item.id, adminId, role);
+    }
+
+    const updates = data.map((item) =>
+      this.prisma.lesson.update({
+        where: { id: item.id },
+        data: { order: item.order },
+      }),
+    );
+
+    return this.prisma.$transaction(updates);
+  }
 }

@@ -4,7 +4,6 @@ import {
   Param,
   Body,
   Get,
-  Post,
   UseGuards,
   Req,
 } from '@nestjs/common';
@@ -16,17 +15,19 @@ import { JwtAuthGuard } from 'src/auth/jwt/auth.guard';
 export class EnrollmentController {
   constructor(private enrollmentService: EnrollmentService) {}
 
-
   @Patch(':userId/:courseId/progress')
   updateProgress(
     @Param('userId') userId: string,
     @Param('courseId') courseId: string,
     @Body() body: { progress: number },
+    @Req() req: any,
   ) {
     return this.enrollmentService.updateProgress(
       userId,
       courseId,
       body.progress,
+      req.user.userId,
+      req.user.role,
     );
   }
 
@@ -35,11 +36,14 @@ export class EnrollmentController {
     @Param('userId') userId: string,
     @Param('courseId') courseId: string,
     @Body() body: { quizScore: number },
+    @Req() req: any,
   ) {
     return this.enrollmentService.updateQuizScore(
       userId,
       courseId,
       body.quizScore,
+      req.user.userId,
+      req.user.role,
     );
   }
 
@@ -49,22 +53,21 @@ export class EnrollmentController {
   }
 
   @Get('my-courses/:courseId')
-getMyCourseDetails(@Req() req: any, @Param('courseId') courseId: string) {
-  console.log('USER111111:', req.user); 
-  return this.enrollmentService.getAgentCourseDetails(req.user.userId, courseId);
-}
-
+  getMyCourseDetails(@Req() req: any, @Param('courseId') courseId: string) {
+    return this.enrollmentService.getAgentCourseDetails(req.user.userId, courseId);
+  }
 
   @Get('stats')
-  getStats() {
-    return this.enrollmentService.getAdminStats();
+  getStats(@Req() req: any) {
+    return this.enrollmentService.getAdminStats(req.user.userId);
   }
 
   @Get('agent/:userId')
-  getAgentProgress(@Param('userId') userId: string) {
-    return this.enrollmentService.getAgentProgress(userId);
+  getAgentProgress(@Param('userId') userId: string, @Req() req: any) {
+    return this.enrollmentService.getAgentProgress(
+      userId,
+      req.user.userId,
+      req.user.role,
+    );
   }
-
-
-
 }
