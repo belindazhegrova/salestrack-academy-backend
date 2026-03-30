@@ -4,11 +4,14 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { MailService } from '../mail/mail.service';
 import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class UserService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService,
+     private mailService: MailService,
+  ) {}
 
   async findByEmail(email: string) {
     return this.prisma.user.findUnique({
@@ -63,8 +66,17 @@ async create(
 }
 
 
-async createAgent(email: string, password: string, adminId: string, name: string) {
-  return this.create(email, password, 'AGENT', adminId, name);
+async createAgent(
+  email: string,
+  password: string,
+  adminId: string,
+  name: string,
+) {
+  const agent = await this.create(email, password, 'AGENT', adminId, name);
+
+  await this.mailService.sendAgentInvite(email, name, password);
+
+  return agent;
 }
 
   async findAgents(adminId: string) {
