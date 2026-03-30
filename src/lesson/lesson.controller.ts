@@ -63,7 +63,7 @@ export class LessonController {
 
     const videoUrl = files.video?.[0]
       ? `/uploads/lessons/${files.video[0].filename}`
-      : undefined;
+      : dto.videoUrl;
 
     const pdfUrl = files.pdf?.[0]
       ? `/uploads/lessons/${files.pdf[0].filename}`
