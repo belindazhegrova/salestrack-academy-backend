@@ -7,6 +7,7 @@ import { CourseModule } from './course/course.module';
 import { LessonModule } from './lesson/lesson.module';
 import { QuizModule } from './quiz/quiz.module';
 import { EnrollmentModule } from './enrollment/enrollment.module';
+import { LessonProgressModule } from './lesson-progress/lesson-progress.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { EnrollmentModule } from './enrollment/enrollment.module';
     LessonModule,
     QuizModule,
     EnrollmentModule,
+    LessonProgressModule,
   ],
 })
 export class AppModule {}
