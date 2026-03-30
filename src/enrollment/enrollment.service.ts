@@ -3,6 +3,7 @@ import {
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
+import PDFDocument from 'pdfkit';
 import { PrismaService } from 'src/prisma/prisma.service';
 
 @Injectable()
@@ -251,4 +252,93 @@ export class EnrollmentService {
       averageQuizScore: avgScore._avg.quizScore || 0,
     };
   }
+
+async generateCertificate(  enrollmentId: string,
+  user: { userId: string; role: string }) {
+  const enrollment = await this.prisma.enrollment.findUnique({
+    where: { id: enrollmentId },
+    include: {
+      user: true,
+      course: {
+        include: {
+          quiz: true,
+        },
+      },
+    },
+  });
+
+  if (!enrollment) {
+    throw new NotFoundException('Enrollment not found');
+  }
+
+    if (
+    user.role === 'AGENT' &&
+    enrollment.userId !== user.userId
+  ) {
+    throw new NotFoundException('Not allowed');
+  }
+
+
+  const passingScore = enrollment.course.quiz?.passingScore ?? 80;
+
+  if (
+    !enrollment.completed ||
+    (enrollment.quizScore ?? 0) < passingScore
+  ) {
+    throw new BadRequestException('Not eligible for certificate');
+  }
+
+  const doc = new PDFDocument({ size: 'A4', margin: 50 });
+  const buffers: Buffer[] = [];
+
+  doc.on('data', (chunk) => buffers.push(chunk));
+
+  doc.fontSize(26).text('Certificate of Completion', {
+    align: 'center',
+  });
+
+  doc.moveDown(2);
+
+  doc.fontSize(14).text('This certifies that', {
+    align: 'center',
+  });
+
+  doc.moveDown();
+
+  doc.fontSize(22).text(enrollment.user.name, {
+    align: 'center',
+  });
+
+  doc.moveDown();
+
+  doc.fontSize(14).text('has successfully completed the course', {
+    align: 'center',
+  });
+
+  doc.moveDown();
+
+  doc.fontSize(18).text(enrollment.course.title, {
+    align: 'center',
+  });
+
+  doc.moveDown(2);
+
+  doc.fontSize(12).text(`Score: ${enrollment.quizScore}%`, {
+    align: 'center',
+  });
+
+  doc.moveDown();
+
+  doc.text(`Date: ${new Date().toLocaleDateString()}`, {
+    align: 'center',
+  });
+
+  doc.end();
+
+  return new Promise<Buffer>((resolve) => {
+    doc.on('end', () => {
+      resolve(Buffer.concat(buffers));
+    });
+  });
+}
 }

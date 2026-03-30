@@ -6,7 +6,9 @@ import {
   Get,
   UseGuards,
   Req,
+  Res,
 } from '@nestjs/common';
+import type { Response } from 'express';
 import { EnrollmentService } from './enrollment.service';
 import { JwtAuthGuard } from 'src/auth/jwt/auth.guard';
 
@@ -70,4 +72,23 @@ export class EnrollmentController {
       req.user.role,
     );
   }
+
+  @Get('certificate/:enrollmentId')
+async downloadCertificate(
+  @Param('enrollmentId') enrollmentId: string,
+  @Req() req: any,
+  @Res() res: Response,
+) {
+  const pdf = await this.enrollmentService.generateCertificate(
+    enrollmentId,
+    req.user,
+  );
+
+  res.set({
+    'Content-Type': 'application/pdf',
+    'Content-Disposition': 'attachment; filename=certificate.pdf',
+  });
+
+  res.send(pdf);
+}
 }
