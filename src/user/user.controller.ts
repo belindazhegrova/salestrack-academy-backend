@@ -18,7 +18,7 @@ export class UserController {
   @Post('agents')
   async createAgent(
     @Req() req: any,
-    @Body() body: { email: string; password: string },
+    @Body() body: { email: string; password: string, name: string },
   ) {
     if (req.user.role !== 'ADMIN') {
       throw new ForbiddenException('Only admin can create agents');
@@ -28,6 +28,7 @@ export class UserController {
       body.email,
       body.password,
       req.user.userId,
+      body.name,
     );
   }
 

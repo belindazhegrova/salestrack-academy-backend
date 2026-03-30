@@ -14,24 +14,26 @@ export class AuthService {
     private jwtService: JwtService
   ) {}
 
-  async register(email: string, password: string) {
-    const existing = await this.userService.findByEmail(email);
+  async register(email: string, password: string, name: string) {
+  const existing = await this.userService.findByEmail(email);
 
-    if (existing) {
-      throw new ConflictException('User already exists');
-    }
-
-    const user = await this.userService.create(
-      email,
-      password,
-      'ADMIN',
-    );
-
-    return {
-      message: 'User registered successfully',
-      user,
-    };
+  if (existing) {
+    throw new ConflictException('User already exists');
   }
+
+  const user = await this.userService.create(
+    email,
+    password,
+    'ADMIN',
+    undefined,
+    name 
+  );
+  
+  return {
+    message: 'User registered successfully',
+    user,
+  };
+}
 
   async login(email: string, password: string) {
     const user = await this.userService.findByEmail(email);
@@ -50,6 +52,7 @@ export class AuthService {
       userId: user.id,
       email: user.email,
       role: user.role,
+      name: user.name,
     });
 
     return {
@@ -58,6 +61,7 @@ export class AuthService {
         id: user.id,
         email: user.email,
         role: user.role,
+        name: user.name,
       },
     };
   }
