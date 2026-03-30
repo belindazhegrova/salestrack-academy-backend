@@ -14,7 +14,6 @@ export class LessonProgressController {
 
   @Get('course/:courseId')
   getCourseLessonProgress(@Req() req: any, @Param('courseId') courseId: string) {
-    console.log('req.user:', req.user);
     return this.lessonProgressService.getCourseLessonProgress(
       req.user.userId,
       courseId,
