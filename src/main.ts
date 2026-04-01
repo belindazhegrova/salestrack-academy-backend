@@ -12,7 +12,7 @@ async function bootstrap() {
    app.useGlobalPipes(new ValidationPipe());
     app.getHttpAdapter().getInstance().set('trust proxy', 1);
     app.enableCors({
-    origin: true,
+    origin: 'https://salestrack-academy-frontend.onrender.com',
     credentials: true,
   });
    app.use('/uploads', express.static(join(process.cwd(), 'uploads')));
