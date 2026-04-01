@@ -25,7 +25,7 @@ export class MailService {
         `,
       });
 
-      console.log('Email sent:', response);
+  
     } catch (error) {
       console.error('Email failed:', error);
     }
