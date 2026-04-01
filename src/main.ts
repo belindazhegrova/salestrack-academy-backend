@@ -14,6 +14,8 @@ async function bootstrap() {
     app.enableCors({
     origin: 'https://salestrack-academy-frontend.onrender.com',
     credentials: true,
+    allowedHeaders: ['Content-Type', 'Authorization'],
+     methods: ['GET', 'POST', 'PATCH', 'DELETE'],
   });
    app.use('/uploads', express.static(join(process.cwd(), 'uploads')));
   await app.listen(process.env.PORT ?? 3000);
