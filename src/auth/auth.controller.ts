@@ -22,10 +22,23 @@ export class AuthController {
     return this.authService.register(dto.email, dto.password, dto.name);
   }
 
-  @Post('login')
-  async login(@Body() dto: LoginDto) {
-    return this.authService.login(dto.email, dto.password);
-  }
+@Post('login')
+async login(
+  @Body() dto: LoginDto,
+  @Res({ passthrough: true }) res: Response
+) {
+  const result = await this.authService.login(dto.email, dto.password);
+
+  res.cookie('access_token', result.access_token, {
+    httpOnly: true,
+    secure: true,
+    sameSite: 'none',
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+    path: '/',
+  });
+
+  return result;
+}
 
   @UseGuards(JwtAuthGuard)
   @Get('me')
@@ -33,8 +46,15 @@ export class AuthController {
     return req.user;
   }
 
-  @Post('logout')
-  logout() {
-    return { message: 'Logged out successfully' };
-  }
+@Post('logout')
+logout(@Res({ passthrough: true }) res: Response) {
+  res.clearCookie('access_token', {
+    httpOnly: true,
+    secure: true,
+    sameSite: 'none',
+    path: '/',
+  });
+
+  return { message: 'Logged out successfully' };
+}
 }
